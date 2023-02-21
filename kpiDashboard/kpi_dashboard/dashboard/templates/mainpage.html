@@ -1,0 +1,538 @@
+{%extends 'base.html'%}
+{% load static %}
+{% block content %}
+<div class="container">
+    <thead class="border-bottom font-weight-bold">
+        <title>WMS KPI Dashboard</title>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.6.1/jquery.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script src="objects.js" stype="text/javascript"></script>
+        <script src="circles.js"></script>
+        <link rel="stylesheet" href="../styles/css/base.css">
+        <script src="script.js"></script>
+
+
+
+
+
+    </thead>
+    <tbody>
+        <div class="continar">
+            <table class="table table-borderless" id="filters">
+                <br>
+                <tr>
+                    <td>
+                        <form id="form">
+                            <label for="processfilter">Process:</label>
+                            <select name="ProcessName" id="ProcessName" onclick="validate()">
+                                <option id="option-none" value="">--Select Process--</option>
+                            </select>
+                    </td>
+                </tr>
+                <tr>
+                    <div>
+                        <td>
+
+                            <label for="warehousefilter">Warehouse:</label>
+                            <select name="warehouseName" id="warehouseName" onclick="validate()">
+                                <option id="option-none" value="">--Select Warehouse--</option>
+                            </select>
+                        </td>
+                    </div>
+                    <div>
+                        <td> <label for="customerfilter">Customer:</label>
+
+                            <select name="customerName" id="customerName">
+                                <option id="option-none" value="">--Select Customer--</option>
+
+                            </select>
+                        </td>
+                    </div>
+
+
+
+
+                    <div>
+                        <td> <label for="checkInIDfilter">Check-In ID:</label>
+                            <select name="checkInID" id="checkInID">
+                                <option id="option-none" value="">--Select CheckIn-ID--</option>
+
+                            </select>
+                        </td>
+                    </div>
+                </tr>
+
+                <!-- <div>
+            <td> <label for="operatorfilter">Operator:</label>
+                <select name="operator" id="operator">
+                    <option id="option-none" value="">--Select Operator--</option>
+
+                </select> -->
+
+                <div>
+                    <tr>
+                        <td>
+                            <form action="/action_page.php">
+                                <label for="Startdatetime">From Date:</label>
+                                <input type="datetime-local" data-date-format="YYYY-MM-DD hh:mm:ss" id="Startdatetime"
+                                    name="datetime" onchange="validate()" />
+                            </form>
+                        </td>
+                </div>
+                <div>
+                    <td>
+                        <form action="/action_page.php">
+                            <label for="Enddatetime">To Date:</label>
+                            <input type="datetime-local" data-date-format="YYYY-MM-DD hh:mm:ss" id="Enddatetime"
+                                name="datetime" onchange="validate()" />
+                        </form>
+                    </td>
+                    </tr>
+                </div>
+        </div>
+
+        </form>
+        </table>
+        <td>&nbsp;</td>
+        <table>
+            <td>
+                <input type="submit" id="btnSearch" value="Show" onclick="showchart()" />
+            </td>
+
+        </table>
+        <br>
+        <div id="chartContainer1">
+            <tr>
+                <table>
+                    <div>
+                        <canvas id="barchart" width="150" height="200">Operator-Wise KPI</canvas>
+                    </div>
+                </table>
+            </tr>
+        </div>
+
+        <div id="chartContainer2">
+
+            <table>
+                <div>
+                    <canvas id="lineChart">Date-Wise KPI</canvas>
+                </div>
+
+            </table>
+
+        </div>
+        <div class="circle">
+            <div class="canvas">
+
+                <div class="circle" id="KPIRatiocircle"></div>
+                <div class="circle" id="Timewastedcircle"></div>
+
+            </div>
+        </div>
+    </tbody>
+</div>
+
+
+<script>
+    $(document).ready(function () {
+
+
+        const PName = document.getElementById('ProcessName');
+        const WHName = document.getElementById('warehouseName');
+        const clientName = document.getElementById('customerName');
+        const checkedInID = document.getElementById('checkInID');
+        //const operatorName = document.getElementById('operator');
+        const obj = { Username: 'Admin', Option: 'Masters' };
+
+        var apiurl = "https://solutionsuat.naqelksa.com/WMSAPI/api/values/GetMasterData";
+
+        getdata();
+
+
+        function getdata(response) {
+            let res = fetch(apiurl, {
+                method: 'post',
+                headers: {
+                    'Accept': 'application/json, text/plain, */*',
+                    'Content-Type': 'application/json'
+                },
+
+                body: JSON.stringify({
+
+                    Username: "Admin",
+                    Option: "Masters"
+
+                }),
+
+            }).then(res => res.json())
+                .then(res => {
+                    console.log(res.data);
+                    const v = res.data;
+                    for (var i = 0; i < res.data.length; i++) {
+                        for (const keys in v) {
+                            const v = res.data[keys];
+                            for (const key in v) {
+
+                                if (keys == "0") {
+                                    // console.log(`${key} : ${v[key].ProcessName}`)
+                                    const response = JSON.stringify(v[key].ProcessName)
+                                    PName.innerHTML += '<option>' + JSON.parse(response) + '</option>';
+
+
+                                    continue;
+                                };
+                                if (keys == "1") {
+                                    // console.log(`${key} : ${v[key].WarehouseCodeName}`)
+                                    const response = JSON.stringify(v[key].OID)
+                                    WHName.innerHTML += '<option>' + JSON.parse(response) + '</option>';
+                                    continue;
+                                };
+                                if (keys == "2") {
+                                    // console.log(`${key} : ${v[key].ClientID}`)
+                                    const response = JSON.stringify(v[key].Customer)
+                                    clientName.innerHTML += '<option>' + JSON.parse(response) + '</option>';
+                                    continue;
+                                };
+
+                                if (keys == "3") {
+                                    // console.log(`${key} : ${v[key].CheckinID}`)
+                                    const response = JSON.stringify(v[key].CheckinID)
+                                    checkedInID.innerHTML += '<option>' + JSON.parse(response) + '</option>';
+                                    continue;
+                                };
+                                // if (keys == "4") {
+                                //     console.log(`${key} : ${v[key].OperatorName}`)
+                                //     operatorName.innerHTML += '<option>' + JSON.stringify(v[key].OperatorName) + '</option>';
+                                //     continue;
+                                // };
+                            }
+                            i++;
+                        }
+                    }
+                });
+
+        }
+    });
+    var barChart=new Chart();
+    var xlabels = [];
+    var ylabels = [];
+    var linechartxlabels = [];
+    var linechartylabels = [];
+    var target = [];
+    var KPIRatiovalue = [];
+    var KPIRatiocolor = [];
+    var values = 0;
+    var color = [];
+
+    async function showchart() {
+        barChart.destroy();
+        await getchartdata();
+        const data = {
+            labels: xlabels,
+            datasets: [{
+                label: "Operator-Wise KPI",
+                backgroundColor: 'rgb(23, 125, 255)',
+                borderColor: 'rgb(23, 125, 255)',
+                data: ylabels,
+            },
+
+            {
+
+                label: "Target",
+                backgroundColor: 'rgb (255,255,224)',
+                borderColor: 'rgb(23, 125, 255)',
+                data: target,
+            }
+            ],
+
+        };
+
+
+        const config = {
+            type: 'bar',
+            data,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: true
+                        }
+                    }]
+                },
+            }
+        };
+        barChart = new Chart(
+            document.getElementById('barchart').getContext('2d')
+            , config);
+
+        var lineChart = document.getElementById('lineChart').getContext('2d')
+        var myLineChart = new Chart(lineChart, {
+            type: 'line',
+            data: {
+                labels: linechartxlabels,
+                datasets: [{
+                    label: "Date-Wise KPI",
+                    borderColor: "#1d7af3",
+                    pointBorderColor: "#FFF",
+                    pointBackgroundColor: "#1d7af3",
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 4,
+                    pointHoverBorderWidth: 1,
+                    pointRadius: 4,
+                    backgroundColor: 'transparent',
+                    fill: true,
+                    borderWidth: 2,
+                    data: linechartylabels
+                },
+                {
+                    label: "target",
+                    borderColor: "#f3545d",
+                    pointBorderColor: "#FFF",
+                    pointBackgroundColor: "#f3545d",
+                    pointBorderWidth: 2,
+                    pointHoverRadius: 4,
+                    pointHoverBorderWidth: 1,
+                    pointRadius: 4,
+                    backgroundColor: 'transparent',
+                    fill: true,
+                    borderWidth: 2,
+                    data: target
+                }]
+
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 10,
+                        fontColor: '#1d7af3',
+                    }
+                },
+                tooltips: {
+                    bodySpacing: 4,
+                    mode: "nearest",
+                    intersect: 0,
+                    position: "nearest",
+                    xPadding: 10,
+                    yPadding: 10,
+                    caretPadding: 10
+                },
+                layout: {
+                    padding: { left: 15, right: 15, top: 15, bottom: 15 }
+                }
+            }
+
+        });
+
+
+        var myCircle = Circles.create({
+            id: 'KPIRatiocircle',
+            radius: 70,
+            value: KPIRatiovalue,
+            maxValue: 100,
+            width: 10,
+            text: function (value) { return value; },
+            colors: KPIRatiocolor,
+            duration: 400,
+            wrpClass: 'circles-wrp',
+            textClass: 'circles-text',
+            valueStrokeClass: 'circles-valueStroke',
+            maxValueStrokeClass: 'circles-maxValueStroke',
+            styleWrapper: true,
+            styleText: true
+        });
+        var myCircle_ = Circles.create({
+            id: 'Timewastedcircle',
+            radius: 70,
+            value: KPIRatiovalue,
+            maxValue: 100,
+            width: 10,
+            text: function (value) { return value + 'm'; },
+            colors: KPIRatiocolor,
+            duration: 400,
+            wrpClass: 'circles-wrp',
+            textClass: 'circles-text',
+            valueStrokeClass: 'circles-valueStroke',
+            maxValueStrokeClass: 'circles-maxValueStroke',
+            styleWrapper: true,
+            styleText: true
+        });
+
+
+    };
+
+    async function getchartdata() {
+        validate()
+        var PNamevalue = document.getElementById('ProcessName').value;
+        var WHNamevalue = document.getElementById('warehouseName').value;
+        var clientNamevalue = document.getElementById('customerName').value;
+        var checkedInIDvalue = document.getElementById('checkInID').value;
+        var Startdatetimevalue = document.getElementById('Startdatetime').value;
+        var Enddatetimevalue = document.getElementById('Enddatetime').value;
+
+        var apiurl_ = "https://solutionsuat.naqelksa.com/WMSAPI/Api/values/GetPerformanceperPallet";
+
+        let res = await fetch(apiurl_, {
+            method: 'post',
+            headers: {
+                'Accept': 'application/json, text/plain, */*',
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+
+                processname: PNamevalue,
+                warehouseid: WHNamevalue,
+                Client: clientNamevalue,
+                CheckinID: checkedInIDvalue,
+                FromDate: Startdatetimevalue,
+                ToDate: Enddatetimevalue
+            }),
+        }).then(res => res.json())
+            .then(res => {
+                // console.log(res.data)
+                const v = res.data;
+
+
+                for (var i = 1; i < res.data.length; i++) {
+                    for (const keys in v) {
+                        const v = res.data[keys];
+                        console.log(v)
+                        for (const key in v) {
+                            if (keys == "0") {
+
+                                console.log(`${key} : ${v[key].Operatorname}`)
+                                Operatorname = JSON.stringify(v[key].Operatorname)
+                                xlabels.push(Operatorname);
+                                console.log(Operatorname)
+                                CountOfReceivings = JSON.stringify(v[key].Receiveingperhour)
+                                ylabels.push(CountOfReceivings);
+                                console.log(CountOfReceivings)
+                                target.push(100);
+                                KPIRatiovalues = JSON.stringify(v[key].ProcessActualtime)
+                                console.log(KPIRatiovalues)
+                                values = 100 / KPIRatiovalues;
+                                console.log(values)
+                                if (values >= 1) {
+                                    KPIRatiocolor.push('green');
+
+                                }
+                                else {
+
+                                    KPIRatiocolor.push('red');
+
+                                }
+
+                                KPIRatiovalue.push(values);
+
+
+                            }
+
+
+                            if (key == "1") {
+                                console.log(`${key} : ${v[key].Date}`)
+                                Datedata = JSON.stringify(v[key].Date)
+                                console.log(Datedata)
+                                linechartxlabels.push(Datedata);
+                                console.log(Datedata)
+                                NumberOfReceivings = JSON.stringify(v[key].NUmberOfReceivings)
+                                linechartylabels.push(NumberOfReceivings);
+                                console.log(NumberOfReceivings)
+                                target.push(100);
+
+                            };
+                        };
+                        continue;
+
+                    }
+
+                    continue;
+
+                }
+                i++
+            });
+
+
+
+        // function changeColor(KPIRatiocolor) {
+        //     console.log(KPIRatiocolor)
+        //     for (i = 0; i < KPIRatiocolor.data.length; i++) {
+        //         color += KPIRatiocolor.data[i];
+        //     };
+        //     return color;
+        // }
+        // console.log(color);
+
+    };
+
+
+
+
+
+    // $('#customerName').on("change", function () {
+    //     var customer = $('#customerName').val();
+    //     var obj = { warehouse: warehouse };
+    //     AjaxCall('/view/GetWarehouse',
+    //         JSON.stringify(obj),
+    //         'POST').done(function (response) {
+    //             if (response.length > 0) {
+    //                 $('#warehouseName').html('');
+    //                 var options = '';
+    //                 options += '<option value="Select">Select</option>';
+    //                 for (var i = 0; i < response.length; i++) {
+    //                     options += '<option value="' + response[i] + '">' + response[i] + '</option>';
+    //                 }
+    //                 $('#warehouseName').append(options);
+
+    //             }
+    //         }).fail(function (error) {
+    //             alert(error.StatusText);
+    //         });
+    // });
+
+    function validate() {
+
+        if ($('#ProcessName').val() == '') {
+            $('#ProcessName').next('div.red').remove();
+            $('#ProcessName').after('<div class="red" style="color: red; font-size: 14px;">*Please select Process type.</div>');
+            return false;
+        }
+        else { $('#ProcessName').next('div.red').remove(); }
+
+        if ($('#warehouseName').val() == '') {
+            $('#warehouseName').next('div.red').remove();
+            $('#warehouseName').after('<div class="red" style="color: red; font-size: 14px;">*Please select Warehouse name.</div>');
+            return false;
+        }
+        else { $('#warehouseName').next('div.red').remove(); }
+
+        if ($('#Startdatetime').val() == '') {
+            $('#Startdatetime').next('div.red').remove();
+            $('#Startdatetime').after('<div class="red" style="color: red; font-size: 14px;">*Please select From date.</div>');
+            return false;
+        }
+        else { $('#Startdatetime').next('div.red').remove(); }
+
+
+        if ($('#Enddatetime').val() == '') {
+            $('#Enddatetime').next('div.red').remove();
+            $('#Enddatetime').after('<div class="red" style="color: red; font-size: 14px;">*Please select To date.</div>');
+            return false;
+        }
+        else { $('#Enddatetime').next('div.red').remove(); }
+
+
+    }
+
+
+
+
+
+
+</script>
+
+
+{% endblock %}
